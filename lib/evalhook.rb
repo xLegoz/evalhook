@@ -62,6 +62,7 @@ module EvalHook
     def initialize
       super
       self.base_namespace = Object
+      @method_hashes = Hash.new
     end
 
     def partialruby_context
@@ -144,7 +145,11 @@ module EvalHook
       end
     end
 
-    def hooked_method(receiver, mname, klass = nil) #:nodoc:
+    def hooked_method(receiver, mname, klass = nil) #:nodoc:'
+      hash_key = "#{receiver.object_id},#{mname.object_id},#{klass.object_id}"
+      if @method_hashes.has_key? hash_key
+        return @method_hashes[hash_key]
+
       m = nil
       is_method_missing = false
 
@@ -178,6 +183,7 @@ module EvalHook
         orig_m = m
         m = lambda{|*x| orig_m.call(mname,*x) }
       end
+      @method_hashes[hash_key]
       m
     end
 
@@ -187,7 +193,7 @@ module EvalHook
         HookedCallValue.new( _binding.eval(mname.to_s) )
       else
         is_method_missing = false
-        m = begin 
+        m = begin
           receiver.method(mname)
         rescue
           is_method_missing = true
